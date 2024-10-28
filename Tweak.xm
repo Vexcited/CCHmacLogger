@@ -60,7 +60,8 @@ void hooked_CCHmac(CCHmacAlgorithm algorithm, const void *key, size_t keyLength,
   original_CCHmac(algorithm, key, keyLength, data, dataLength, macOut);
   
   NSMutableString *macOutput = [NSMutableString string];
-  for (size_t i = 0; i < (algorithm == kCCHmacAlgSHA256 ? CC_SHA256_DIGEST_LENGTH : 16); i++) {
+  // length of the output is determined by the algorithm
+  for (size_t i = 0; i < CCHmacOutputSize(algorithm); i++) {
     [macOutput appendFormat:@"%02x", ((unsigned char *)macOut)[i]];
   }
 
@@ -76,7 +77,7 @@ void hooked_CCHmac(CCHmacAlgorithm algorithm, const void *key, size_t keyLength,
 
   NSString *algorithmString = algorithmToString(algorithm);
 
-  writeLog([NSString stringWithFormat:@"CCHmac called: Algorithm=%@, KeyLength=%zu, DataLength=%zu", algorithmString, keyLength, dataLength]);
+  writeLog([NSString stringWithFormat:@"CCHmac called: Algorithm=%@, KeyLength=%zu, InputLength=%zu", algorithmString, keyLength, dataLength]);
   writeLog([NSString stringWithFormat:@"Key: %@", keyString]);
   writeLog([NSString stringWithFormat:@"Input: %@", dataString]);
   writeLog([NSString stringWithFormat:@"Output: %@", macOutput]);
@@ -84,7 +85,7 @@ void hooked_CCHmac(CCHmacAlgorithm algorithm, const void *key, size_t keyLength,
 
 int hooked_CCHmacUpdate(CCHmacContext *ctx, const void *data, size_t dataLength) {
   int result = original_CCHmacUpdate(ctx, data, dataLength);
-  writeLog([NSString stringWithFormat:@"CCHmacUpdate called: DataLength=%zu", dataLength]);
+  writeLog([NSString stringWithFormat:@"CCHmacUpdate called: InputLength=%zu", dataLength]);
 
   NSMutableString *dataString = [NSMutableString string];
   for (size_t i = 0; i < dataLength; i++) {
@@ -95,9 +96,10 @@ int hooked_CCHmacUpdate(CCHmacContext *ctx, const void *data, size_t dataLength)
   return result;
 }
 
+// store algorithm for use in CCHmacFinal
 static CCHmacAlgorithm currentAlgorithm;
+
 int hooked_CCHmacInit(CCHmacContext *ctx, CCHmacAlgorithm algorithm, const void *key, size_t keyLength) {
-  // store algorithm for use in CCHmacFinal
   currentAlgorithm = algorithm;
 
   NSString *algorithmString = algorithmToString(algorithm);
@@ -127,7 +129,7 @@ int hooked_CCHmacFinal(void *macOut, CCHmacContext *ctx) {
   return result;
 }
 
-// Function to hook all functions
+// entry point where we hook all functions
 __attribute__((constructor)) static void init() {
   original_CCHmac = (CCHmacType)dlsym(RTLD_DEFAULT, "CCHmac");
   if (original_CCHmac) MSHookFunction((void *)original_CCHmac, (void *)&hooked_CCHmac, (void **)&original_CCHmac);
