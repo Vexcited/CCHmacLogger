@@ -1,0 +1,9 @@
+Package: com.vexcited.cchmaclogger
+Name: CCHmacLogger
+Version: 0.1.0
+Architecture: iphoneos-arm
+Description: A cute tweak to log CCHmac functions.
+Maintainer: Mikkel ALMONTE--RINGAUD
+Author: Mikkel ALMONTE--RINGAUD
+Section: Tweaks
+Depends: mobilesubstrate (>= 0.9.5000)
